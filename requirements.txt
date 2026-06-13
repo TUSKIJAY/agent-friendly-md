@@ -1,0 +1,30 @@
+# agent-friendly-md dependencies.
+# v0.1 runtime (doctor/init/state/manifest gates) needs NONE of these — pure stdlib.
+# Install per milestone; doctor.py reports per-phase readiness.
+#
+# Versions are PINNED (==) to the validated set so a fresh clone is reproducible
+# across machines and over time. To re-validate after a bump: run
+# `python3 scripts/run_python.py tools/doctor.py` and the full test suite.
+
+# --- Phase 1 extraction (v0.2) ---
+# Pinned superset of vendor/doc-to-agent-markdown/requirements.txt. Pillow is added
+# here for lib/visual_compare.py (the vendored backend itself does not import PIL).
+python-docx==1.2.0
+PyMuPDF==1.27.2.3
+openpyxl==3.1.5
+python-pptx==1.0.2
+Pillow==12.2.0
+
+# --- Phase 6 visual acceptance (v0.8) ---
+# pandoc is a system binary (brew install pandoc), not a pip package.
+playwright==1.60.0
+# after install: python -m playwright install chromium
+# mermaid renders via mmdc from @mermaid-js/mermaid-cli (npm global or PATH)
+# offline formula render assets are vendored under vendor/katex.
+
+# --- optional ---
+# pandas==2.3.3          # large-table CSV handling; enable if needed
+# pytest>=7.0.0          # the bundled suite uses stdlib unittest; pytest optional
+
+# --- dev/test ---
+# (none required — tests/run_tests.py uses stdlib unittest)

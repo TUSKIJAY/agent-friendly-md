@@ -1,0 +1,29 @@
+{
+  "schema_version": "agent-friendly-md-manifest/0.1",
+  "job_id": "zhcaej4-20260612",
+  "document_slug": "zhcaej4",
+  "stage": "final",
+  "generated_at": "2026-06-12T00:00:00Z",
+  "sources": [
+    {"path": "source/zhcaej4.pdf", "bytes": 1048576, "sha256": "<64-hex>", "mtime": "2026-06-12T00:00:00Z"}
+  ],
+  "outputs": {
+    "main": "main.md",
+    "parts": [
+      {"path": "parts/03-filter-design.md", "title": "3 滤波器设计", "source_range": "p.4-12", "sha256": "<64-hex>"}
+    ],
+    "assets": [
+      {"path": "assets/fig_p006_purepath_biquad_example.png", "sha256": "<64-hex>"}
+    ]
+  },
+  "split": {
+    "enabled": true,
+    "thresholds": {"max_pages": 100, "max_sheets": 3, "max_markdown_bytes": 307200, "max_blocks": 1500},
+    "parts": ["parts/03-filter-design.md"]
+  },
+  "input_hashes": {
+    "ir/blocks.jsonl": "<64-hex>",
+    "ir/document.ir.json": "<64-hex>"
+  },
+  "stats": {"block_count": 128, "asset_count": 24, "table_count": 12, "formula_count": 7}
+}

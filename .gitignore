@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Job bundles — large files, renders, screenshots, caches do not belong in git.
+# (Also created under each source document's own .agent-friendly-md/ dir.)
+.agent-friendly-md/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+.claude/
+
+# Playwright browser cache (if ever placed locally)
+/.playwright/

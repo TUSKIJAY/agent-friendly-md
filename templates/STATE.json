@@ -1,0 +1,47 @@
+{
+  "schema_version": "agent-friendly-md-state/0.1",
+  "job_id": "zhcaej4-20260612",
+  "created_at": "2026-06-12T00:00:00Z",
+  "updated_at": "2026-06-12T00:00:00Z",
+  "source_files": ["source/zhcaej4.pdf"],
+  "current_phase": "2_ir_build",
+  "phase_status": {
+    "0_intake": "done",
+    "1_extraction": "done",
+    "2_ir_build": "in_progress",
+    "3_semantic_compile": "pending",
+    "4_audit": "pending",
+    "5_assembly": "pending",
+    "6_validation": "pending",
+    "7_package": "pending"
+  },
+  "document_profile": {
+    "profile_status": "confirmed",
+    "confirmed_by": "validate_extraction.py",
+    "primary_type": "pdf",
+    "pages": 38,
+    "has_images": true,
+    "has_tables": true,
+    "has_formulas": true,
+    "has_comments": false,
+    "has_attachments": false,
+    "is_scanned": false,
+    "risk_level": "high",
+    "risk_level_history": [
+      {"phase": "0_intake", "risk_level": "medium", "basis": "source extension"},
+      {"phase": "1_extraction", "risk_level": "high", "basis": "tables and formulas detected"}
+    ]
+  },
+  "config": {
+    "split_thresholds": {
+      "max_pages": 100,
+      "max_sheets": 3,
+      "max_markdown_bytes": 307200,
+      "max_blocks": 1500
+    }
+  },
+  "paths": {
+    "job_root": "zhcaej4-20260612",
+    "output_dir": "output"
+  }
+}

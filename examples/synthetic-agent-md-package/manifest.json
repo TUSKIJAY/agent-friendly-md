@@ -1,0 +1,22 @@
+{
+  "schema_version": "agent-friendly-md-manifest/0.1",
+  "stage": "final",
+  "job_id": "synthetic-20260613",
+  "document_slug": "synthetic",
+  "generated_at": "2026-06-13T00:00:00Z",
+  "sources": [
+    {
+      "path": "source/synthetic.pdf",
+      "bytes": 0,
+      "sha256": "synthetic"
+    }
+  ],
+  "outputs": {
+    "main": "main.md",
+    "qa_report": "qa_report.md",
+    "visual_acceptance": "visual_acceptance.md",
+    "unresolved": "unresolved.md"
+  },
+  "output_hashes": {},
+  "input_hashes": {}
+}
