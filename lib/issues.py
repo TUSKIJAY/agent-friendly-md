@@ -8,7 +8,10 @@ from lib import jobstate as js
 
 SEVERITIES = ("blocker", "major", "minor", "info")
 STATUSES = ("open", "accepted", "fixed")
-CATEGORIES = ("ocr", "table", "formula", "figure", "provenance", "source_conflict", "rendering")
+CATEGORIES = (
+    "ocr", "table", "formula", "figure", "provenance", "source_conflict",
+    "rendering", "security",
+)
 REQUIRED_FIELDS = (
     "id", "severity", "status", "accepted_by", "accepted_reason",
     "source_block_id", "source_anchor", "category", "issue",

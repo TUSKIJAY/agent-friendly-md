@@ -96,6 +96,7 @@ def backfill(blocks: list[dict], cache: dict[str, str]) -> tuple[int, int]:
                     fig["caption"] = f"{m.group(1).strip()}：{m.group(3).strip()}"
             b["confidence"] = max(_confidence(b.get("confidence")), 0.85)
             b["needs_review"] = False
+            b["evidence_level"] = "agent_reviewed"
             described += 1
         else:
             if not fig.get("description"):

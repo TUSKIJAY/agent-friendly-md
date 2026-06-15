@@ -124,6 +124,9 @@ class TestFullSmokePipeline(unittest.TestCase):
         source = self.root / "smoke.pdf"
         _make_pdf(source)
         job, package, diagnostics = self._run_full_pipeline(source, "smoke-pdf")
+        meta = json.loads((job / "extracted/extract_meta.json").read_text(encoding="utf-8"))
+        self.assertEqual(meta["routing"]["pdf"]["native_text_pages"], 1)
+        self.assertTrue((job / "review/extraction_security_audit.json").is_file())
         comparisons = diagnostics["source_comparisons"]
         self.assertTrue(comparisons["sampled_pages"])
         self.assertTrue(comparisons["artifacts"])

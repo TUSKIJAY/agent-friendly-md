@@ -13,6 +13,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 WRAPPER = PROJECT_ROOT / "scripts" / "run_python.py"
 
 from lib import ir as IR  # noqa: E402
+from lib import extraction_elements as EE  # noqa: E402
+from lib import extraction_router as ER  # noqa: E402
 from lib import issues as ISS  # noqa: E402
 from lib import jobstate as js  # noqa: E402
 from lib import manifest as mf  # noqa: E402
@@ -113,12 +115,20 @@ class TestV07Validators(unittest.TestCase):
         }
         IR.save_all(self.job, blocks, doc)
 
-    def _write_extraction(self) -> None:
+    def _write_extraction(self, *, include_elements: bool = True) -> None:
+        skeleton = "# Title\n\nBody.\n"
+        meta = {"source_format": ".md", "image_count": 0, "mapped_image_count": 0, "structured_stats": {}}
+        elements = EE.elements_from_skeleton(skeleton, "source/doc.md", ".md")
+        state = js.load_state(self.job)
+        elements, meta = ER.analyze_and_write(self.job, state, meta, elements)
+        if include_elements:
+            EE.write_elements(self.job, elements)
+            meta = EE.update_extract_meta(meta, elements, ".md")
         (self.job / "extracted" / "extract_meta.json").write_text(
-            json.dumps({"source_format": ".md", "image_count": 0, "structured_stats": {}}) + "\n",
+            json.dumps(meta, ensure_ascii=False) + "\n",
             encoding="utf-8",
         )
-        (self.job / "extracted" / "text" / "doc_skeleton.md").write_text("# Title\n\nBody.\n", encoding="utf-8")
+        (self.job / "extracted" / "text" / "doc_skeleton.md").write_text(skeleton, encoding="utf-8")
 
     def test_validate_tables_catches_row_width_mismatch(self):
         self._write_state_phase("4_audit")
@@ -245,6 +255,13 @@ class TestV07Validators(unittest.TestCase):
         self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
         second = run("tools/run_validators.py", "--job", str(self.job), "--phase", "1_extraction", "--no-advance")
         self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
+
+    def test_validate_extraction_requires_elements_file(self):
+        self._write_state_phase("1_extraction")
+        self._write_extraction(include_elements=False)
+        r = run("validators/validate_extraction.py", "--job", str(self.job))
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("elements_present", r.stdout)
 
     def test_run_validators_detects_stale_phase_inputs(self):
         self._write_state_phase("5_assembly")

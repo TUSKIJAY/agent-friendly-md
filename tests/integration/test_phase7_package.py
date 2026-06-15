@@ -232,6 +232,27 @@ class TestPhase7Package(unittest.TestCase):
         self.assertTrue((out / self.final_main).is_file())
         self.assertTrue((out / "assets/fig.png").is_file())
 
+    def test_export_okf_requires_package_gate_and_preserves_agent_md_package(self):
+        package = Path(self.tmp.name) / "pkg"
+        r = run("tools/package_output.py", "--job", str(self.job), "--out", str(package))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        okf = Path(self.tmp.name) / "pkg-okf"
+        r = run("tools/export_okf.py", "--job", str(self.job), "--package", str(package), "--out", str(okf))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertTrue((okf / "index.md").is_file())
+        document = (okf / "document.md").read_text(encoding="utf-8")
+        self.assertIn("type: \"Reference\"", document)
+        self.assertIn("afmd_package_gate: \"passed\"", document)
+        self.assertIn("_agent-md", document)
+        self.assertTrue((package / "_agent-md/package_metadata.json").is_file())
+
+    def test_export_okf_refuses_failed_package_gate(self):
+        okf = Path(self.tmp.name) / "bad-okf"
+        (self.job / "output/provenance.json").unlink()
+        r = run("tools/export_okf.py", "--job", str(self.job), "--out", str(okf))
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertFalse(okf.exists())
+
     def test_include_work_package_sanitizes_copied_logs(self):
         gate_log = self.job / "logs/gates/gate_6_validation_probe.json"
         gate_log.write_text(json.dumps({
