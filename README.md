@@ -1,5 +1,11 @@
 # agent-friendly-md
 
+> **当前分支：`codex/native-extraction-router`**
+>
+> 本分支用于展示 Phase 1 原生结构抽取路由的实现方向：在既有 0-7 阶段流程不变的前提下，
+> 增加 `extracted/elements.jsonl`、native evidence probes、extraction security audit、
+> PDF bbox overlay、证据等级汇总，以及可选的 OKF-style 下游导出。`main` 分支仍是当前公开发布基线。
+
 <div align="center">
 
 **可追溯文档编译流水线 · 文档中间表示（IR）· 质量检查 · 视觉验收 · 可移植输出包**
