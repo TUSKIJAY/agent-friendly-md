@@ -66,9 +66,19 @@ class TestPhase1Backend(unittest.TestCase):
 
         # §3 mapping slots all landed
         for rel in ["extracted/text", "extracted/extract_meta.json", "extracted/images",
+                    "extracted/elements.jsonl",
+                    "review/extraction_security_audit.json", "review/extraction_security_audit.md",
                     "review/vision_cache.json", "review/cleaning_decisions.json",
                     "review/imported_quality_report.md", "ir/summary.seed.md", "output/main.md"]:
             self.assertTrue((job / rel).exists(), f"missing §3 slot: {rel}")
+        meta = json.loads((job / "extracted/extract_meta.json").read_text(encoding="utf-8"))
+        self.assertEqual(meta["extraction_element_schema"], "agent-extraction-elements/0.1")
+        self.assertEqual(meta["elements_file"], "extracted/elements.jsonl")
+        self.assertGreater(meta["element_count"], 0)
+        self.assertIn("routing", meta)
+        first_element = json.loads((job / "extracted/elements.jsonl").read_text(encoding="utf-8").splitlines()[0])
+        self.assertIn("source_anchor", first_element)
+        self.assertIn("evidence_level", first_element)
 
         # profile confirmed + risk upgraded by table/formula content
         st = json.loads((job / "STATE.json").read_text(encoding="utf-8"))
@@ -120,6 +130,9 @@ class TestPhase1Backend(unittest.TestCase):
         for rel in ["ir/blocks.jsonl", "ir/document.ir.json",
                     "ir/assets.index.json", "ir/provenance.json"]:
             self.assertTrue((job / rel).is_file(), f"missing IR file: {rel}")
+        first_block = json.loads((job / "ir/blocks.jsonl").read_text(encoding="utf-8").splitlines()[0])
+        self.assertIn("evidence_level", first_block)
+        self.assertIn("extraction_metadata", first_block)
         self.assertTrue((job / "logs" / "gates" / "gate_2_ir_build_validate_ir.json").is_file())
 
         # corrupting a projection must make validate_ir hard-fail

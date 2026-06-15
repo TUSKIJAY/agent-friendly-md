@@ -43,16 +43,66 @@ Document IR 是单一事实源。本文件定义其存储契约、block 子 sche
 
 ### block 公共字段（blocks.jsonl 每行）
 
-每个 block 必须有：`id`、`type`、`source_anchor`、`confidence`、`content` 或结构化子字段、`needs_review`。
+每个 block 必须有：`id`、`type`、`source_anchor`、`confidence`、`evidence_level`、
+`content` 或结构化子字段、`needs_review`。
 
 block id 前缀约定：`block_heading_`、`block_para_`、`block_list_`、`block_table_`、`block_figure_`、
 `block_formula_`、`block_code_`。asset id 前缀 `asset_`。
+
+### Phase 1 extraction elements
+
+Phase 1 先把后端输出归一化为 `extracted/elements.jsonl`，Phase 2 再映射为 IR block。
+当前后端仍以 `extracted/text/*_skeleton.md` 与 `extracted/extract_meta.json` 为主，因此
+`elements.jsonl` 由兼容 shim 生成；未来后端可直接输出同一 schema。
+
+每个 element 必须有：
+
+- `schema_version`: `agent-extraction-elements/0.1`
+- `element_id`: `element_000001` 这类稳定顺序 id
+- `source_type`: `pdf|docx|pptx|xlsx|md|txt`
+- `element_type`: `heading|paragraph|list|table|formula|image|chart|note|comment|code`
+- `content`: 该 element 的正文或结构化内容
+- `source_anchor`: 使用下方同一套 anchor 词汇
+- `native_metadata`: 后端原生信息；兼容 skeleton 路径必须记录无法恢复的字段为 `unavailable`
+- `evidence_level`: `native|ocr|vlm|agent_reviewed`
+- `confidence`: `0..1` 浮点数
+- `needs_review`: 布尔值
+
+`extracted/extract_meta.json` 同步记录 `elements_file`、`element_count`、`element_type_stats`、
+`evidence_level_stats`、`coverage` 和 `backend.element_output`。当前 skeleton shim 不伪造 bbox、
+shape、range 等高精度字段；缺失字段必须在 `native_metadata.unavailable` 中留痕。
+Phase 2 会把 `native_metadata` 投到 IR block 的 `extraction_metadata`，供 QA 和 gate 解释
+高精度 anchor 字段为什么存在或缺失。
+
+PDF text-layer probe 还可以写出 `extracted/pdf_text_blocks.jsonl`，保留每个可验证 text block
+的 `backend_element_id`、`text`、`bbox` 和 `layout_zone`，供 overlay、QA 和未来 backend adapter
+复用。
 
 ---
 
 ## 2. source_anchor 规范
 
 每个 block 级内容必须可追溯到原文位置。
+
+扩展字段必须挂在既有 `source_anchor.kind` 下，不新增第二套 locator 词汇：
+
+| source type | source_anchor kind | 可扩展字段 |
+| --- | --- | --- |
+| PDF | `pdf_page` | `page`, `page_label`, `bbox`, `backend_element_id`, `coverage`, `layout_zone` |
+| PPTX | `slide` | `slide`, `shape_id`, `shape_name`, `bbox`, `placeholder_type`, `z_order`, `paragraph_index`, `cell_ref` |
+| XLSX | `sheet_range` | `sheet`, `range`, `table_name`, `named_range`, `formula_cell`, `chart_id` |
+| DOCX | `docx_anchor` | `heading_path`, `paragraph_index`, `table_index`, `cell_ref`, `comment_id`, `image_rel_id` |
+| MD/TXT | `text_anchor` | `heading_path`, `block_index`, `line_range` |
+
+`evidence_level` 描述内容证据来源，不替代定位可靠性：定位可靠性由 `source_anchor` 完整度、
+是否有 bbox/shape/range 等高精度字段，以及 Phase 6 源侧证据覆盖表达。
+
+| evidence_level | 含义 | 默认审阅姿态 |
+| --- | --- | --- |
+| `native` | 来自文本层、OOXML、workbook、Markdown AST 或 TXT 行范围等原生结构 | 通常可直接通过；结构异常仍需 `needs_review=true` |
+| `ocr` | 来自 OCR 识别 | 默认需要抽样视觉证据 |
+| `vlm` | 来自多模态模型理解 | 必须 `needs_review=true`，且需要视觉 evidence |
+| `agent_reviewed` | Agent/人工已基于证据审阅 | 必须保留审阅依据或 issue/decision 记录 |
 
 PDF：
 
@@ -72,11 +122,27 @@ XLSX：
 {"kind": "sheet_range", "source_file": "source/model.xlsx", "sheet": "Sheet1", "range": "A12:D30"}
 ```
 
+```json
+{"kind": "sheet_range", "source_file": "source/model.xlsx", "sheet": "Model", "formula_cell": "F12"}
+```
+
+```json
+{"kind": "sheet_range", "source_file": "source/model.xlsx", "sheet": "Charts", "chart_id": "chart_1", "range": "E2"}
+```
+
 DOCX：
 
 ```json
 {"kind": "docx_anchor", "source_file": "source/report.docx", "page": 12,
  "heading_path": ["2 技术方案", "2.3 实施步骤"], "paragraph_index": 84}
+```
+
+```json
+{"kind": "docx_anchor", "source_file": "source/report.docx", "heading_path": ["Review"], "comment_id": "7"}
+```
+
+```json
+{"kind": "docx_anchor", "source_file": "source/report.docx", "heading_path": ["Figures"], "image_rel_id": "rId12"}
 ```
 
 Word 页码不可稳定获取时，使用 `heading_path + paragraph_index`，并在 `qa_report.md` 说明页码限制。

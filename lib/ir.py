@@ -17,7 +17,9 @@ PROVENANCE_SCHEMA = "agent-ir-provenance/0.1"
 BLOCK_TYPES = (
     "heading", "para", "list", "table", "figure", "formula", "code",
 )
-BLOCK_REQUIRED_FIELDS = ("id", "type", "source_anchor", "confidence", "needs_review")
+BLOCK_REQUIRED_FIELDS = (
+    "id", "type", "source_anchor", "confidence", "needs_review", "evidence_level",
+)
 
 # The structured sub-field each block type must carry (PLAN §9.1 "content 或结构化子字段").
 TYPE_SUBFIELD = {
@@ -44,7 +46,8 @@ IR_PROVENANCE = "ir/provenance.json"
 
 
 def new_block(block_id: str, btype: str, source_anchor: dict, *,
-              confidence: float, needs_review: bool, **fields) -> dict:
+              confidence: float, needs_review: bool,
+              evidence_level: str = "native", **fields) -> dict:
     if btype not in BLOCK_TYPES:
         raise ValueError(f"unknown block type: {btype}")
     block = {
@@ -53,6 +56,7 @@ def new_block(block_id: str, btype: str, source_anchor: dict, *,
         "source_anchor": source_anchor,
         "confidence": confidence,
         "needs_review": needs_review,
+        "evidence_level": evidence_level,
     }
     block.update(fields)
     return block

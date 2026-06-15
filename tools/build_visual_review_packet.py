@@ -10,6 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from lib import gates  # noqa: E402
+from lib import ir as IR  # noqa: E402
 from lib import issues as ISS  # noqa: E402
 from lib import jobstate as js  # noqa: E402
 from lib import manifest as mf  # noqa: E402
@@ -72,6 +73,7 @@ def _overall(gates_data: list[dict], diagnostics: dict, issues: list[dict], pars
 def _write_visual(job_root: Path, diagnostics: dict, state: dict, overall: str) -> None:
     warnings = diagnostics.get("warnings") or []
     comparisons = diagnostics.get("source_comparisons") or {}
+    evidence_manifest = P.REVIEW_EVIDENCE_MANIFEST if (job_root / P.REVIEW_EVIDENCE_MANIFEST).is_file() else ""
     lines = [
         "# Visual Acceptance Report",
         "",
@@ -86,6 +88,7 @@ def _write_visual(job_root: Path, diagnostics: dict, state: dict, overall: str) 
         "- review/visual_acceptance/anchor_map.json",
         "- review/visual_acceptance/render_diagnostics.json",
         f"- {comparisons.get('dir', 'review/visual_acceptance/source_comparisons')}/",
+        *([f"- {evidence_manifest}"] if evidence_manifest else []),
         "",
         "## Diagnostics",
         "",
@@ -99,6 +102,25 @@ def _write_visual(job_root: Path, diagnostics: dict, state: dict, overall: str) 
         overall,
     ]
     (job_root / P.OUTPUT_VISUAL_ACCEPTANCE).write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _evidence_level_rows(job_root: Path) -> list[str]:
+    try:
+        blocks = IR.read_blocks(job_root)
+    except (OSError, json.JSONDecodeError):
+        return ["| unavailable | 0 | 0 |", "| --- | ---: | ---: |"]
+    counts: dict[str, dict[str, int]] = {}
+    for block in blocks:
+        level = str(block.get("evidence_level") or "missing")
+        row = counts.setdefault(level, {"blocks": 0, "needs_review": 0})
+        row["blocks"] += 1
+        if block.get("needs_review"):
+            row["needs_review"] += 1
+    rows = ["| Evidence level | Blocks | Needs review |", "| --- | ---: | ---: |"]
+    for level in sorted(counts):
+        row = counts[level]
+        rows.append(f"| {level} | {row['blocks']} | {row['needs_review']} |")
+    return rows
 
 
 def _write_qa(job_root: Path, gates_data: list[dict], issues: list[dict], overall: str) -> None:
@@ -124,6 +146,10 @@ def _write_qa(job_root: Path, gates_data: list[dict], issues: list[dict], overal
         f"- blocker(open): {blocker_open}",
         f"- major(open): {major_open}",
         "- see output/unresolved.md",
+        "",
+        "## Evidence Levels",
+        "",
+        *_evidence_level_rows(job_root),
         "",
         "## Visual Acceptance",
         "",

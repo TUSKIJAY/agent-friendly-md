@@ -23,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from lib import jobstate as js  # noqa: E402
+from lib import extraction_elements as EE  # noqa: E402
 from lib import ir as IR  # noqa: E402
 from lib import gates  # noqa: E402
 from lib.gates import Check  # noqa: E402
@@ -69,6 +70,47 @@ def build_checks(job_root: Path) -> list[Check]:
     bad_type = [b.get("id") for b in blocks if b.get("type") not in IR.BLOCK_TYPES]
     c.append(Check("known_block_types", not bad_type,
                    message="ok" if not bad_type else f"unknown types: {bad_type[:5]}"))
+    bad_evidence = [
+        b.get("id") for b in blocks
+        if b.get("evidence_level") not in ("native", "ocr", "vlm", "agent_reviewed")
+    ]
+    c.append(Check("known_evidence_levels", not bad_evidence,
+                   message="ok" if not bad_evidence else f"unknown evidence: {bad_evidence[:5]}"))
+    bad_conf = []
+    for b in blocks:
+        try:
+            conf = float(b.get("confidence"))
+        except (TypeError, ValueError):
+            bad_conf.append(b.get("id"))
+            continue
+        if conf < 0 or conf > 1:
+            bad_conf.append(b.get("id"))
+    c.append(Check("confidence_range", not bad_conf,
+                   message="0..1" if not bad_conf else f"invalid confidence: {bad_conf[:5]}"))
+    bad_review = [b.get("id") for b in blocks if not isinstance(b.get("needs_review"), bool)]
+    c.append(Check("needs_review_bool", not bad_review,
+                   message="ok" if not bad_review else f"not bool: {bad_review[:5]}"))
+    bad_vlm = [
+        b.get("id") for b in blocks
+        if b.get("evidence_level") == "vlm" and b.get("needs_review") is False
+    ]
+    c.append(Check("vlm_blocks_need_review", not bad_vlm,
+                   message="ok" if not bad_vlm else f"vlm without review: {bad_vlm[:5]}"))
+    missing_precision_trace = []
+    for b in blocks:
+        if b.get("type") not in ("table", "figure", "formula"):
+            continue
+        meta = b.get("extraction_metadata")
+        if not isinstance(meta, dict):
+            continue
+        anchor = b.get("source_anchor") or {}
+        has_precise = any(anchor.get(k) for k in EE.HIGH_PRECISION_ANCHOR_FIELDS)
+        unavailable = meta.get("unavailable") if isinstance(meta.get("unavailable"), list) else []
+        if not has_precise and not unavailable:
+            missing_precision_trace.append(b.get("id"))
+    c.append(Check("high_value_precision_trace", not missing_precision_trace,
+                   message="ok" if not missing_precision_trace
+                   else f"missing precision trace: {missing_precision_trace[:5]}"))
 
     # PLAN §9.1: every block carries "content 或结构化子字段" — enforce per type
     no_subfield = [b.get("id") for b in blocks

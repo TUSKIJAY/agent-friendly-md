@@ -29,6 +29,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from lib import jobstate as js  # noqa: E402
 from lib import backend as bk  # noqa: E402
+from lib import extraction_elements as EE  # noqa: E402
+from lib import extraction_router as ER  # noqa: E402
 from lib import paths as P  # noqa: E402
 from lib import subproc  # noqa: E402
 
@@ -83,6 +85,12 @@ def _reset_dirs(job_root: Path) -> None:
         if d.is_dir():
             shutil.rmtree(d)
         d.mkdir(parents=True, exist_ok=True)
+    elements = job_root / P.EXTRACT_ELEMENTS
+    if elements.exists():
+        elements.unlink()
+    pdf_blocks = job_root / P.EXTRACT_PDF_TEXT_BLOCKS
+    if pdf_blocks.exists():
+        pdf_blocks.unlink()
 
 
 def _quality_report(job_root: Path, meta: dict, n_img: int, n_page: int, console: str) -> None:
@@ -189,6 +197,14 @@ def main(argv: list[str]) -> int:
         meta["pages_dir"] = P.EXTRACTED_PAGES
         meta["mapped_image_count"] = n_img
         meta["mapped_page_count"] = n_page
+        elements = EE.elements_from_skeleton(
+            dst_skeleton.read_text(encoding="utf-8", errors="replace"),
+            sources[0],
+            meta.get("source_format") or Path(source).suffix,
+        )
+        elements, meta = ER.analyze_and_write(job_root, state, meta, elements)
+        EE.write_elements(job_root, elements)
+        meta = EE.update_extract_meta(meta, elements, meta.get("source_format") or Path(source).suffix)
         (job_root / P.EXTRACT_META).write_text(
             json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
@@ -200,6 +216,7 @@ def main(argv: list[str]) -> int:
 
     print(f"[ok] extraction mapped into bundle: {job_root}")
     print(f"     skeleton : extracted/text/{dst_skeleton.name}")
+    print(f"     elements : {P.EXTRACT_ELEMENTS}")
     print(f"     images   : {n_img}  pages: {n_page}")
     print(f"     meta     : extracted/extract_meta.json")
     print("     next: run the Phase 1 gate ->")

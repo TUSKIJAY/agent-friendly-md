@@ -24,6 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from lib import jobstate as js  # noqa: E402
+from lib import extraction_elements as EE  # noqa: E402
 from lib import ir as IR  # noqa: E402
 from lib import paths as P  # noqa: E402
 from lib.skeleton_parser import Parser  # noqa: E402
@@ -79,19 +80,28 @@ def main(argv: list[str]) -> int:
     except (OSError, json.JSONDecodeError) as e:
         print(f"[error] extract_meta unreadable: {e}", file=sys.stderr)
         return 1
-    skel = job_root / meta.get("skeleton_file", "")
-    if not skel.is_file():
-        cands = sorted((job_root / P.EXTRACTED_TEXT).glob("*_skeleton.md"))
-        if not cands:
-            print("[error] no skeleton found", file=sys.stderr)
-            return 2
-        skel = cands[0]
-    text = skel.read_text(encoding="utf-8", errors="replace")
-
     source_rel = (state.get("source_files") or [""])[0]
-    parser = Parser(source_rel, meta.get("source_format", Path(source_rel).suffix))
-    parser.parse(text)
-    blocks = parser.blocks
+    elements_file = job_root / P.EXTRACT_ELEMENTS
+    if elements_file.is_file():
+        try:
+            elements = EE.read_elements(job_root)
+            blocks = EE.blocks_from_elements(elements)
+            text = EE.element_text_blob(elements)
+        except (OSError, json.JSONDecodeError, TypeError, ValueError) as e:
+            print(f"[error] extracted/elements.jsonl unreadable: {e}", file=sys.stderr)
+            return 1
+    else:
+        skel = job_root / meta.get("skeleton_file", "")
+        if not skel.is_file():
+            cands = sorted((job_root / P.EXTRACTED_TEXT).glob("*_skeleton.md"))
+            if not cands:
+                print("[error] no skeleton found", file=sys.stderr)
+                return 2
+            skel = cands[0]
+        text = skel.read_text(encoding="utf-8", errors="replace")
+        parser = Parser(source_rel, meta.get("source_format", Path(source_rel).suffix))
+        parser.parse(text)
+        blocks = parser.blocks
 
     fallback_title = Path(source_rel).stem or state["document_profile"].get("primary_type", "document")
     title = _title_from_blocks(blocks, fallback_title)

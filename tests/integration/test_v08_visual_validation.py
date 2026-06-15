@@ -318,6 +318,7 @@ class TestV08VisualValidation(unittest.TestCase):
             },
             "confidence": 1.0,
             "needs_review": False,
+            "evidence_level": "native",
             "heading": {"level": 1, "text": "Intro"},
         }, ensure_ascii=False) + "\n", encoding="utf-8")
         r = run("tools/render_agent_md_preview.py", "--job", str(self.job))
